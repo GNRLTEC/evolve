@@ -58,8 +58,11 @@ function TAB:Initialize( pnl )
 	self.LimitsContainer:SetPadding( 10 )
 	self.LimitsContainer:EnableHorizontal( true )
 	self.LimitsContainer:EnableVerticalScrollbar( true )
-	self.LimitsContainer.Paint = function( self )
-		draw.RoundedBox( 4, 2, 2, self:GetWide() - 6, self:GetTall() - 12, Color( 230, 230, 230, 255 ) )
+	self.LimitsContainer.Paint = function( s )
+		local th = evolve:GetTheme()
+		draw.RoundedBox( 4, 2, 2, s:GetWide() - 6, s:GetTall() - 12, th.panel )
+		surface.SetDrawColor( th.border.r, th.border.g, th.border.b, 80 )
+		surface.DrawOutlinedRect( 2, 2, s:GetWide() - 6, s:GetTall() - 12 )
 	end
 	
 	for i, cv in pairs( self.Limits ) do
@@ -96,9 +99,9 @@ function TAB:Initialize( pnl )
 				knob_released(cvSlider.Slider.Knob, mousecode)
 			end
 			
-			cvSlider.Label:SetDark(true)
+			evolve:StyleNumSlider( cvSlider )
 			self.LimitsContainer:AddItem( cvSlider )
-		
+
 			table.insert( self.ConVarSliders, cvSlider )
 		end
 	end
@@ -110,8 +113,11 @@ function TAB:Initialize( pnl )
 	self.Settings:SetPadding( 10 )
 	self.Settings:EnableHorizontal( true )
 	self.Settings:EnableVerticalScrollbar( true )
-	self.Settings.Paint = function( self )
-		draw.RoundedBox( 4, 4, 2, self:GetWide() - 16, self:GetTall() - 12, Color( 230, 230, 230, 255 ) )
+	self.Settings.Paint = function( s )
+		local th = evolve:GetTheme()
+		draw.RoundedBox( 4, 4, 2, s:GetWide() - 16, s:GetTall() - 12, th.panel )
+		surface.SetDrawColor( th.border.r, th.border.g, th.border.b, 80 )
+		surface.DrawOutlinedRect( 4, 2, s:GetWide() - 16, s:GetTall() - 12 )
 	end
 	
 	for i, cv in pairs( self.ConVars ) do
@@ -124,12 +130,19 @@ function TAB:Initialize( pnl )
 			cvCheckbox.OnChange = function( self, val )
 				RunConsoleCommand( "ev", "convar", cv[1], evolve:BoolToInt( val ) * ( cv[3] or 1 ) )
 			end
-			cvCheckbox.Label:SetDark(true)
+			evolve:StyleCheckBoxLabel( cvCheckbox )
 			self.Settings:AddItem( cvCheckbox )
-			
+
 			table.insert( self.ConVarCheckboxes, cvCheckbox )
 		end
 	end
+end
+
+if CLIENT then
+	hook.Add( "EV_ThemeChanged", "EV_SandboxTabRestyle", function()
+		for _, sl in ipairs( TAB.ConVarSliders )    do evolve:StyleNumSlider( sl )    end
+		for _, cb in ipairs( TAB.ConVarCheckboxes ) do evolve:StyleCheckBoxLabel( cb ) end
+	end )
 end
 
 if ( CLIENT and GAMEMODE.IsSandboxDerived ) then

@@ -531,8 +531,11 @@ end
 -------------------------------------------------------------------------------------------------------------------------*/
 
 function _R.Player:EV_HasPrivilege( priv )
-	if ( evolve.ranks[ self:EV_GetRank() ] ) then
-		return self:EV_GetRank() == "owner" or table.HasValue( evolve.ranks[ self:EV_GetRank() ].Privileges, priv )
+	local rankId = self:EV_GetRank()
+	local rankData = evolve.ranks[ rankId ]
+	if ( rankData ) then
+		-- owner always passes; guard against ranks with no Privileges table
+		return rankId == "owner" or table.HasValue( rankData.Privileges or {}, priv )
 	else
 		return false
 	end
@@ -613,11 +616,15 @@ function evolve:Rank( ply )
 	
 	local usergroup = ply:GetNWString( "UserGroup", "guest" )
 	if ( usergroup == "user" ) then usergroup = "guest" end
-	ply:SetNWString( "EV_UserGroup", usergroup )
-	
+
+	-- Determine the final rank before writing to the network string.
+	-- Previously we wrote EV_UserGroup twice (once with the GMod usergroup,
+	-- once with the stored Evolve rank). The intermediate write is visible to
+	-- clients within the same tick and causes the client-side Think() loop to
+	-- detect a spurious rank change, destroying and requiring a manual reopen
+	-- of the menu. Now we resolve the rank first and write only once.
 	local rank = ply:GetProperty( "Rank" )
 	if ( rank and evolve.ranks[ rank ] ) then
-		ply:SetNWString( "EV_UserGroup", rank )
 		usergroup = rank
 	else
 		// COMPATIBILITY
@@ -625,24 +632,24 @@ function evolve:Rank( ply )
 			for _, ranks in ipairs( evolve.compatibilityRanks ) do
 				if ( ranks.steamID == ply:SteamID() ) then
 					rank = ranks.rank
-					
-					ply:SetNWString( "EV_UserGroup", rank )
 					usergroup = rank
-					
+
 					ply:SetProperty( "Rank", rank )
 					evolve:CommitProperties()
-					
+
 					break
 				end
 			end
 		end
 		// COMPATIBILITY
 	end
-	
+
+	ply:SetNWString( "EV_UserGroup", usergroup )
+
 	if ( ply:EV_HasPrivilege( "Ban menu" ) ) then
 		evolve:SyncBans( ply )
 	end
-	
+
 	evolve:RankGroup( ply, usergroup )
 end
 

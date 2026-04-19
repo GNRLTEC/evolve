@@ -1,26 +1,28 @@
-/*-------------------------------------------------------------------------------------------------------------------------
-	Serverside autorun file
--------------------------------------------------------------------------------------------------------------------------*/
+--[[-------------------------------------------------------------------------
+    Serverside autorun file
+---------------------------------------------------------------------------]]
 
-// Set up Evolve table
+-- Set up Evolve table
 evolve = {}
 
-// Distribute clientside and shared files
-AddCSLuaFile( "autorun/client/ev_autorun.lua" )
-AddCSLuaFile( "ev_framework.lua" )
-AddCSLuaFile( "ev_cl_init.lua" )
-AddCSLuaFile( "ev_menu/cl_menu.lua" )
+-- Distribute clientside and shared files
+AddCSLuaFile("autorun/client/ev_autorun.lua")
+AddCSLuaFile("ev_framework.lua")
+AddCSLuaFile("ev_cl_init.lua")
+AddCSLuaFile("ev_theme/sh_theme.lua")
+AddCSLuaFile("ev_menu/cl_menu.lua")
 
-// Load serverside files
---Load vON
+-- Load serverside files
+-- Load vON
 local von_bak = von
-include( "includes/ev_von/von.lua")
+include("includes/ev_von/von.lua")
 evolve.von = von
 von = von_bak
 
-include( "ev_framework.lua" )
-include( "ev_sv_init.lua" )
-include( "ev_menu/sv_menu.lua" )
+include("ev_framework.lua")
+include("ev_theme/sh_theme.lua")
+include("ev_sv_init.lua")
+include("ev_menu/sv_menu.lua")
 
-// SourceBans integration
-include( "ev_sourcebans.lua" )
+-- SourceBans integration
+include("ev_sourcebans.lua")

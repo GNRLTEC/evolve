@@ -18,6 +18,7 @@ function TAB:Initialize( pnl )
 	self.RankList:SetPos( 0, 0 )
 	self.RankList:SetSize( self.Width/2 - 6, 125 )
 	self.RankList:AddColumn("Ranks")
+	evolve:StyleListView( self.RankList )
 	self.RankList.Think = function()
 		local lastRank = self.RankList:GetSelected()[1]
 		if lastRank == nil then
@@ -62,11 +63,12 @@ function TAB:Initialize( pnl )
 	self.PrivFilter:ChooseOptionID( 1 )
 	self.PrivFilter.OnSelect = function( id, value, data )
 		self.AllToggle = true
-		
+
 		self.PrivFilter.Selected = data
 		self:UpdatePrivileges()
 	end
-	
+	evolve:StyleComboBox( self.PrivFilter )
+
 	// Create the privilege list
 	self.PrivList = vgui.Create( "DListView", pnl )
 	self.PrivList:SetPos( 0, self.RankList:GetTall() + 84 + 20 + 5 )
@@ -86,14 +88,27 @@ function TAB:Initialize( pnl )
 		RunConsoleCommand( "ev_setrank", self.RankList:GetSelected()[1].Rank, self.AllToggle and 1 or 0, filter )
 		self.AllToggle = !self.AllToggle
 	end
-	
+	evolve:StyleListView( self.PrivList )
+
 	self.PropertyContainer = vgui.Create( "DPanelList", pnl )
 	self.PropertyContainer:SetPos( 0, 130 )
 	self.PropertyContainer:SetSize( self.Width/2 - 6, 74 )
-	
+	self.PropertyContainer.Paint = function( s, w, h )
+		local th = evolve:GetTheme()
+		draw.RoundedBox( 4, 0, 0, w, h, th.panel )
+		surface.SetDrawColor( th.border.r, th.border.g, th.border.b, 80 )
+		surface.DrawOutlinedRect( 0, 0, w, h )
+	end
+
 	self.ColorPickerContainer = vgui.Create("DPanelList", pnl)
 	self.ColorPickerContainer:SetPos(self.Width/2, 0)
 	self.ColorPickerContainer:SetSize(self.Width/2, pnl:GetParent():GetTall())
+	self.ColorPickerContainer.Paint = function( s, w, h )
+		local th = evolve:GetTheme()
+		draw.RoundedBox( 4, 0, 0, w, h, th.panel )
+		surface.SetDrawColor( th.border.r, th.border.g, th.border.b, 80 )
+		surface.DrawOutlinedRect( 0, 0, w, h )
+	end
 	
 	// Rank color
 	self.ColorPicker = vgui.Create( "DColorMixer", self.ColorPickerContainer )
@@ -115,7 +130,24 @@ function TAB:Initialize( pnl )
 	self.Immunity:SetMin( 0 )
 	self.Immunity:SetMax( 99 )
 	self.Immunity:SetText( "Immunity" )
-	self.Immunity.Label:SetDark(true)
+	evolve:StyleNumSlider( self.Immunity )
+
+	-- Permanent value label in the empty space to the left of the slider.
+	-- Reads the slider's current value every frame so it always stays in sync,
+	-- including when the rank selection changes and SetValue is called externally.
+	self.ImmunityValue = vgui.Create( "DLabel", self.PropertyContainer )
+	self.ImmunityValue:SetPos( 4, 5 )
+	self.ImmunityValue:SetSize( 68, 20 )
+	self.ImmunityValue:SetFont( "EV_SmallBold" )
+	self.ImmunityValue:SetContentAlignment( 6 )  -- right-align against the slider edge
+	self.ImmunityValue:SetText( "0" )
+	self.ImmunityValue.Think = function( lbl )
+		local th  = evolve:GetTheme()
+		local txt = tostring( math.Round( self.Immunity:GetValue() ) )
+		if lbl:GetText() ~= txt then lbl:SetText( txt ) end
+		lbl:SetColor( th.accent )
+	end
+
 	self.Immunity.Think = function()
 		if ( input.IsMouseDown( MOUSE_LEFT ) ) then
 			self.applySettings = true
@@ -142,6 +174,7 @@ function TAB:Initialize( pnl )
 		local color = self.ColorPicker:GetColor()
 		RunConsoleCommand( "ev_setrankp", self.RankList:GetSelected()[1].Rank, self.Immunity:GetValue(), data, color.r, color.g, color.b )
 	end
+	evolve:StyleComboBox( self.Usergroup )
 	
 	// New button
 	self.NewButton = vgui.Create( "EvolveButton", pnl )
@@ -154,7 +187,7 @@ function TAB:Initialize( pnl )
 		Derma_StringRequest( "Create a rank", "Enter the title of your rank (e.g. Noob):", "", function( title )
 			Derma_StringRequest( "Create a rank", "Enter the id of your rank (e.g. noob):", string.gsub( string.lower( title ), " ", "" ), function( id )
 				if ( string.find( id, " " ) or string.lower( id ) != id or evolve.ranks[ id ] ) then
-					chat.AddText( evolve.colors.red, "You specified an invalid identifier. Make sure it doesn't exist yet and does not contain spaces or capitalized characters." )
+					chat.AddText( evolve.colors.red, "[Evolve] ", color_white, "You specified an invalid identifier. Make sure it doesn't exist yet and does not contain spaces or capitalized characters." )
 				else
 					local curRank = self.RankList:GetSelected()[1].Rank
 					Derma_Query( "Do you want to derive the settings and privileges of the currently selected rank, " .. evolve.ranks[ curRank ].Title .. "?", "Rank inheritance",
@@ -327,8 +360,8 @@ function TAB:Update()
 			item.Icon:SetImage( "icon16/" .. rank.Icon .. ".png" )
 			item.Icon:SetPos( 4, 4 )
 			item.Icon:SetSize( 14, 14 )
-			item.PaintOver = function()
-				draw.SimpleText( rank.Title, "Default", 28, 5, Color( 0, 0, 0, 255 ) )
+			item.PaintOver = function( line )
+				draw.SimpleText( rank.Title, "EV_Text", 28, 5, evolve:LineTextColor( line ) )
 			end
 		end
 		self.RankList:SelectItem( self.RankList:GetLines()[#self.RankList:GetLines()] )
@@ -352,10 +385,10 @@ end
 function TAB:EV_RankRenamed( rank, title )
 	for _, rankitem in pairs( self.RankList:GetLines() ) do
 		if ( rankitem.Rank == rank ) then
-			rankitem.PaintOver = function()
-				draw.SimpleText( title, "Default", 28, 5, Color( 0, 0, 0, 255 ) )
+			rankitem.PaintOver = function( line )
+				draw.SimpleText( title, "EV_Text", 28, 5, evolve:LineTextColor( line ) )
 			end
-			
+
 			break
 		end
 	end
@@ -383,8 +416,8 @@ function TAB:EV_RankCreated( id )
 	item.Icon:SetImage( "icon16/" .. rank.Icon .. ".png" )
 	item.Icon:SetPos( 4, 4 )
 	item.Icon:SetSize( 14, 14 )
-	item.PaintOver = function()
-		draw.SimpleText( rank.Title, "Default", 28, 5, Color( 0, 0, 0, 255 ) )
+	item.PaintOver = function( line )
+		draw.SimpleText( rank.Title, "EV_Text", 28, 5, evolve:LineTextColor( line ) )
 	end
 end
 
@@ -399,6 +432,19 @@ end
 
 function TAB:IsAllowed()
 	return LocalPlayer():EV_HasPrivilege( "Rank menu" )
+end
+
+// Restyle widgets when the active theme switches so colors track the user
+// choice without requiring a menu reopen.
+if CLIENT then
+	hook.Add( "EV_ThemeChanged", "EV_RanksTabRestyle", function()
+		if not TAB.RankList or not IsValid( TAB.RankList ) then return end
+		evolve:StyleListView( TAB.RankList )
+		evolve:StyleListView( TAB.PrivList )
+		evolve:StyleComboBox( TAB.PrivFilter )
+		evolve:StyleComboBox( TAB.Usergroup )
+		evolve:StyleNumSlider( TAB.Immunity )
+	end )
 end
 
 evolve:RegisterTab( TAB )

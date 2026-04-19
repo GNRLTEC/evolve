@@ -19,6 +19,7 @@ function TAB:Initialize( pnl )
 	self.BanList:AddColumn( "Reason" ):SetFixedWidth( 150 )
 	self.BanList:AddColumn( "Time left" ):SetFixedWidth( 75 )
 	self.BanList:AddColumn( "Banned by" ):SetFixedWidth( 70 )
+	evolve:StyleListView( self.BanList )
 	
 	self.ButUnban = vgui.Create( "EvolveButton", pnl )
 	self.ButUnban:SetSize( 80, 22 )
@@ -97,6 +98,12 @@ end
 
 function TAB:IsAllowed()
 	return LocalPlayer():EV_HasPrivilege( "Ban menu" )
+end
+
+if CLIENT then
+	hook.Add( "EV_ThemeChanged", "EV_BansTabRestyle", function()
+		if IsValid( TAB.BanList ) then evolve:StyleListView( TAB.BanList ) end
+	end )
 end
 
 evolve:RegisterTab( TAB )

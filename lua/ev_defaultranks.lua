@@ -58,3 +58,7 @@ evolve.ranks.owner.ReadOnly = true
 evolve.ranks.owner.UserGroup = "superadmin"
 evolve.ranks.owner.Color = Color(0,127,255)
 evolve.ranks.owner.Immunity = 99
+-- Owner bypasses all privilege checks in EV_HasPrivilege, but the Privileges
+-- table must be initialised so code that iterates or calls table.HasValue on it
+-- never errors (e.g. EV_RankPrivileges net receiver, TransferRank loop).
+evolve.ranks.owner.Privileges = {}
